@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"  
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: weather-cli
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: weather-cli.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: weather-cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} \
+             weather-cli-${{ matrix.target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: weather-cli-${{ matrix.target }}*
